@@ -24,7 +24,6 @@ import {
   workerApprovalRecordLine
 } from './worker-approval-card-model'
 import {
-  useNativeChatPinnedWorkerApprovals,
   useNativeChatWorkerApprovalReceipts,
   type NativeChatWorkerApproval
 } from './native-chat-worker-approval-feed'
@@ -324,21 +323,6 @@ export function NativeChatWorkerApprovalStack({
           />
         ))}
     </div>
-  )
-}
-
-/** The pinned stack for a chat's own party; it holds the approvals itself, so the pane does not redraw for them. */
-export function NativeChatPartyWorkerApprovalStack({
-  party,
-  ...stack
-}: Omit<Parameters<typeof NativeChatWorkerApprovalStack>[0], 'approvals'> & {
-  party: string | null
-}): React.JSX.Element | null {
-  return (
-    <NativeChatWorkerApprovalStack
-      approvals={useNativeChatPinnedWorkerApprovals(stack.target, party)}
-      {...stack}
-    />
   )
 }
 
