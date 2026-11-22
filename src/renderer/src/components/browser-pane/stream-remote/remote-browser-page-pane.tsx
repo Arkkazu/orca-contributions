@@ -37,6 +37,7 @@ import { useRemoteBrowserPageChromeChords } from './use-remote-browser-page-chro
 import { useRemoteBrowserPagePointerHistory } from './use-remote-browser-page-pointer-history'
 import { useRemoteBrowserPageWheel } from './use-remote-browser-page-wheel'
 import { useRemoteBrowserPageZoom } from './use-remote-browser-page-zoom'
+import { useRemoteBrowserPageFind } from './use-remote-browser-page-find'
 import {
   RemoteBrowserPageContextMenu,
   useRemoteBrowserPageContextMenu
@@ -141,11 +142,9 @@ export function RemoteBrowserPagePane({
   )
 
   // Stopped streams cannot clear paneBusy with frames; staged pages remain busy until creation. Stream notices outrank consequent RPC failures.
-  const busy = stagedPage
-    ? true
-    : streamStatus.kind === 'stopped'
-      ? false
-      : paneBusy || isRemoteBrowserStreamBusy(streamStatus)
+  const busy =
+    stagedPage ||
+    (streamStatus.kind !== 'stopped' && (paneBusy || isRemoteBrowserStreamBusy(streamStatus)))
   const streamNotice = remoteBrowserStreamNotice(streamStatus)
   const remoteError =
     paneNotice?.kind === 'direct' ? paneNotice.text : (streamNotice ?? paneNotice?.text ?? null)
@@ -156,7 +155,9 @@ export function RemoteBrowserPagePane({
     runtimeWorktree,
     createRemoteOperationToken,
     isCurrentRemoteOperationToken,
-    closeMissingRemotePage
+    closeMissingRemotePage,
+    runtimeEnvironmentId,
+    setPaneNotice
   }
 
   const {
@@ -175,7 +176,6 @@ export function RemoteBrowserPagePane({
     setAddressBarValueFromPage,
     onSetUrl,
     onUpdatePageState,
-    setPaneNotice,
     setPaneBusy
   })
 
@@ -190,11 +190,13 @@ export function RemoteBrowserPagePane({
     }
   }, [browserTab.id, navigateToUrl, stagedPage])
 
+  const find = useRemoteBrowserPageFind({ ...remotePageTarget, isActive, browserTab })
   useRemoteBrowserPageChromeChords({
+    ...remotePageTarget,
     chromeShortcutScope,
     workspaceId,
     runRemoteNavigation,
-    setPaneNotice
+    openFind: find.openFind
   })
   useRemoteBrowserPagePointerHistory({ isActive, remoteViewportRef, runRemoteNavigation })
 
@@ -274,17 +276,14 @@ export function RemoteBrowserPagePane({
     remoteViewportSizeRef,
     frameMetadata,
     enqueueRemoteInput,
-    scheduleRemoteTabInfoRefresh,
-    setPaneNotice
+    scheduleRemoteTabInfoRefresh
   })
 
   const zoom = useRemoteBrowserPageZoom({
     ...remotePageTarget,
     browserPageId: browserTab.id,
-    runtimeEnvironmentId,
     streaming: frameUrl !== null,
-    onZoomed: resyncRemoteViewport,
-    setPaneNotice
+    onZoomed: resyncRemoteViewport
   })
   useRemoteBrowserPageWheel({
     ...remotePageTarget,
@@ -295,7 +294,6 @@ export function RemoteBrowserPagePane({
     getRemoteImagePoint,
     inputQueue,
     scheduleRemoteTabInfoRefresh,
-    setPaneNotice,
     requestZoom: zoom.requestZoom
   })
 
@@ -307,8 +305,7 @@ export function RemoteBrowserPagePane({
     imageRef,
     getRemoteImagePoint,
     enqueueRemoteInput,
-    mountedRef,
-    setPaneNotice
+    mountedRef
   })
 
   return (
@@ -386,12 +383,14 @@ export function RemoteBrowserPagePane({
           void runRemoteNavigation('browser.reload', undefined, ignoreCache)
         }
         onStop={() => void stopRemotePage()}
+        onFind={find.openFind}
       />
       {annotateBanner}
       <RemoteBrowserPageViewport
         remoteViewportRef={remoteViewportRef}
         imageRef={imageRef}
         feedbackBadgeRef={zoom.feedbackBadgeRef}
+        find={find}
         frameUrl={frameUrl}
         frameMetadata={frameMetadata}
         busy={busy}

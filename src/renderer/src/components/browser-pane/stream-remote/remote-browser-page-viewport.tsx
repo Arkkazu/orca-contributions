@@ -14,6 +14,8 @@ import type { RemoteBrowserPageHandle } from '@/store/slices/browser/browser-sli
 import { resolveRemoteFailureExternalUrl } from '../../../../../shared/browser/navigation/browser-url'
 import type { BrowserScreencastFrameMetadata } from '../../../../../shared/browser/screencast/browser-screencast-protocol'
 import { getRemoteBrowserFrameStyle } from './remote-browser-frame-style'
+import BrowserFind from '../assemble-chrome/find/BrowserFind'
+import type { RemoteBrowserPageFind } from './use-remote-browser-page-find'
 import { MarkupOverlay } from '../annotate/MarkupOverlay'
 import type { MarkupModeController } from '../annotate/capture/useMarkupMode'
 import { BrowserLoadFailureOverlay } from '../navigate/browser-load-failure-overlay'
@@ -35,6 +37,7 @@ export function RemoteBrowserPageViewport({
   remoteViewportRef,
   imageRef,
   feedbackBadgeRef,
+  find,
   frameUrl,
   frameMetadata,
   busy,
@@ -64,6 +67,7 @@ export function RemoteBrowserPageViewport({
   remoteViewportRef: React.RefObject<HTMLDivElement | null>
   imageRef: React.RefObject<HTMLImageElement | null>
   feedbackBadgeRef: React.RefObject<BrowserPageFeedbackBadgeHandle | null>
+  find: RemoteBrowserPageFind
   frameUrl: string | null
   frameMetadata: BrowserScreencastFrameMetadata | null
   busy: boolean
@@ -131,6 +135,12 @@ export function RemoteBrowserPageViewport({
       className="@container-size relative min-h-0 flex-1 overflow-hidden bg-background"
     >
       <BrowserPageFeedbackBadge ref={feedbackBadgeRef} />
+      <BrowserFind
+        browserPageId={browserTab.id}
+        isOpen={find.findOpen}
+        onClose={find.closeFind}
+        webviewRef={find.findTargetRef}
+      />
       {markup.isActive && markup.baseImage ? (
         // Why the frame's own box: markup draws over the letterboxed page, not the whole pane.
         <div className="absolute top-0 left-0" style={remoteFrameStyle}>
@@ -155,7 +165,10 @@ export function RemoteBrowserPageViewport({
           onPointerMove={handleRemotePointerMove}
           onPointerUp={handleRemotePointerUp}
           onContextMenu={handleRemoteContextMenu}
-          onKeyDown={handleRemoteScreenshotKeyDown}
+          onKeyDown={(event) => {
+            find.closeFindOnPageEscape(event)
+            handleRemoteScreenshotKeyDown(event)
+          }}
           onPaste={handleRemoteScreenshotPaste}
           draggable={false}
         />
